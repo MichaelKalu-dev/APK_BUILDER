@@ -15,42 +15,52 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       
-    - name: Install specific SDK and Build Tools
+    - name: Install SDK and Build Tools
       run: |
         sdkmanager "platforms;android-34" "build-tools;34.0.0"
-        echo "$ANDROID_HOME/build-tools/34.0.0" >> $GITHUB_PATH
-      
+        
     - name: Build APK
       run: |
-        mkdir -p app/build
-        mkdir -p app/src/main/res/values
-        echo '<resources><string name="app_name">Life OS</string></resources>' > app/src/main/res/values/strings.xml
+        # Setup absolute paths
+        WORKSPACE=$GITHUB_WORKSPACE
+        BUILD_TOOLS=$ANDROID_HOME/build-tools/34.0.0
+        PLATFORM=$ANDROID_HOME/platforms/android-34/android.jar
         
-        # Compile Resources
-        aapt2 compile --dir app/src/main/res -o app/build/res.zip
-        aapt2 link -o app/build/app-unsigned.apk -I $ANDROID_HOME/platforms/android-34/android.jar --manifest app/src/main/AndroidManifest.xml -R app/build/res.zip --java app/build/gen
+        # Create necessary directories
+        mkdir -p $WORKSPACE/app/build
+        mkdir -p $WORKSPACE/app/build/obj
+        mkdir -p $WORKSPACE/app/src/main/res/values
+        echo '<resources><string name="app_name">Life OS</string></resources>' > $WORKSPACE/app/src/main/res/values/strings.xml
         
-        # Compile Java
-        javac -source 1.8 -target 1.8 -bootclasspath $ANDROID_HOME/platforms/android-34/android.jar -d app/build/obj app/src/main/java/com/example/webapp/MainActivity.java app/build/gen/com/example/webapp/R.java
+        # 1. Compile Resources
+        $BUILD_TOOLS/aapt2 compile --dir $WORKSPACE/app/src/main/res -o $WORKSPACE/app/build/res.zip
         
-        # Convert to Dex
-        d8 --lib $ANDROID_HOME/platforms/android-34/android.jar --output app/build app/build/obj/com/example/webapp/*.class
+        # 2. Link Resources and Manifest
+        $BUILD_TOOLS/aapt2 link -o $WORKSPACE/app/build/app-unsigned.apk -I $PLATFORM --manifest $WORKSPACE/app/src/main/AndroidManifest.xml -R $WORKSPACE/app/build/res.zip
         
-        # Package HTML files into the APK correctly
-        mkdir -p app/src/main/assets
-        cp *.html app/src/main/assets/
-        cp *.json app/src/main/assets/ 2>/dev/null || true
-        cp *.svg app/src/main/assets/ 2>/dev/null || true
+        # 3. Compile Java
+        javac -source 1.8 -target 1.8 -bootclasspath $PLATFORM -d $WORKSPACE/app/build/obj $WORKSPACE/app/src/main/java/com/example/webapp/MainActivity.java
         
-        cd app/src/main
-        zip -r ../../../build/app-unsigned.apk assets/
-        cd ../../../../
-        zip -j app/build/app-unsigned.apk app/build/classes.dex
+        # 4. Convert to Android Dex format
+        $BUILD_TOOLS/d8 --lib $PLATFORM --output $WORKSPACE/app/build $WORKSPACE/app/build/obj/com/example/webapp/*.class
         
-        # Sign APK
-        keytool -genkey -v -keystore app/build/key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias myalias -storepass password -keypass password -dname "CN=Android Debug,O=Android,C=US"
-        zipalign -v -p 4 app/build/app-unsigned.apk app/build/app-aligned.apk
-        apksigner sign --ks app/build/key.jks --ks-pass pass:password --key-pass pass:password --out app/build/LifeOS.apk app/build/app-aligned.apk
+        # 5. Package HTML, JSON, and SVG files into the APK assets folder
+        mkdir -p $WORKSPACE/app/src/main/assets
+        cp $WORKSPACE/*.html $WORKSPACE/app/src/main/assets/ 2>/dev/null || true
+        cp $WORKSPACE/*.json $WORKSPACE/app/src/main/assets/ 2>/dev/null || true
+        cp $WORKSPACE/*.svg $WORKSPACE/app/src/main/assets/ 2>/dev/null || true
+        
+        cd $WORKSPACE/app/src/main
+        zip -r $WORKSPACE/app/build/app-unsigned.apk assets/
+        cd $WORKSPACE
+        
+        # 6. Add the compiled Java code into the APK
+        zip -j $WORKSPACE/app/build/app-unsigned.apk $WORKSPACE/app/build/classes.dex
+        
+        # 7. Sign the APK
+        keytool -genkey -v -keystore $WORKSPACE/app/build/key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias myalias -storepass password -keypass password -dname "CN=Android Debug,O=Android,C=US"
+        $BUILD_TOOLS/zipalign -v -p 4 $WORKSPACE/app/build/app-unsigned.apk $WORKSPACE/app/build/app-aligned.apk
+        $BUILD_TOOLS/apksigner sign --ks $WORKSPACE/app/build/key.jks --ks-pass pass:password --key-pass pass:password --out $WORKSPACE/app/build/LifeOS.apk $WORKSPACE/app/build/app-aligned.apk
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
