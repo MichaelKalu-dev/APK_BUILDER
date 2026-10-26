@@ -12,19 +12,21 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      
-    - name: Install SDK and Build Tools
-      run: |
-        sdkmanager "platforms;android-34" "build-tools;34.0.0"
-        
     - name: Build APK
       run: |
-        # Setup absolute paths
-        WORKSPACE=$GITHUB_WORKSPACE
+        # Use the pre-installed Android SDK on the GitHub server
+        export ANDROID_HOME=/usr/local/lib/android/sdk
+        export ANDROID_SDK_ROOT=$ANDROID_HOME
+        
         BUILD_TOOLS=$ANDROID_HOME/build-tools/34.0.0
         PLATFORM=$ANDROID_HOME/platforms/android-34/android.jar
+        
+        # If Android 14 SDK isn't there, install it using the built-in sdkmanager
+        if [ ! -d "$PLATFORM" ]; then
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
+        fi
+        
+        WORKSPACE=$(pwd)
         
         # Create necessary directories
         mkdir -p $WORKSPACE/app/build
@@ -44,7 +46,7 @@ jobs:
         # 4. Convert to Android Dex format
         $BUILD_TOOLS/d8 --lib $PLATFORM --output $WORKSPACE/app/build $WORKSPACE/app/build/obj/com/example/webapp/*.class
         
-        # 5. Package HTML, JSON, and SVG files into the APK assets folder
+        # 5. Package HTML files into the APK correctly
         mkdir -p $WORKSPACE/app/src/main/assets
         cp $WORKSPACE/*.html $WORKSPACE/app/src/main/assets/ 2>/dev/null || true
         cp $WORKSPACE/*.json $WORKSPACE/app/src/main/assets/ 2>/dev/null || true
@@ -53,11 +55,9 @@ jobs:
         cd $WORKSPACE/app/src/main
         zip -r $WORKSPACE/app/build/app-unsigned.apk assets/
         cd $WORKSPACE
-        
-        # 6. Add the compiled Java code into the APK
         zip -j $WORKSPACE/app/build/app-unsigned.apk $WORKSPACE/app/build/classes.dex
         
-        # 7. Sign the APK
+        # 6. Sign the APK
         keytool -genkey -v -keystore $WORKSPACE/app/build/key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias myalias -storepass password -keypass password -dname "CN=Android Debug,O=Android,C=US"
         $BUILD_TOOLS/zipalign -v -p 4 $WORKSPACE/app/build/app-unsigned.apk $WORKSPACE/app/build/app-aligned.apk
         $BUILD_TOOLS/apksigner sign --ks $WORKSPACE/app/build/key.jks --ks-pass pass:password --key-pass pass:password --out $WORKSPACE/app/build/LifeOS.apk $WORKSPACE/app/build/app-aligned.apk
