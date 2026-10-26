@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Historical Data</title>
+<style>
+  :root{
+    --bg:#0b0712;
+    --bg-2:#120b1d;
+    --panel:#181024;
+    --panel-2:#1f1530;
+    --line:#2c1f42;
+    --purple:#a855f7;
+    --purple-2:#7c3aed;
+    --purple-glow:rgba(168,85,247,.35);
+    --text:#ece7f5;
+    --muted:#9a8fb0;
+    --danger:#ef4444;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(900px 500px at 15% -10%, rgba(124,58,237,.28), transparent 60%),
+      radial-gradient(700px 500px at 100% 0%, rgba(168,85,247,.18), transparent 55%),
+      linear-gradient(180deg,var(--bg-2),var(--bg) 60%);
+    background-attachment:fixed;
+    min-height:100vh;
+  }
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    display:flex;align-items:center;gap:14px;
+    padding:16px 22px;
+    background:rgba(18,11,29,.78);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+
+  .nav-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12.5px;font-weight:600;
+    color:#e9d5ff;text-decoration:none;
+    background:#241736;border:1px solid #3b2a58;
+    padding:8px 12px;border-radius:10px;
+    transition:border-color .15s, background .15s;
+    flex:0 0 auto;
+  }
+  .nav-btn:hover{border-color:var(--purple);background:#2d1c44;}
+  .nav-btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;}
+
+  .brand{
+    display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.2px;font-size:16px;
+  }
+  .brand .dot{
+    width:8px;height:8px;border-radius:50%;background:var(--purple);box-shadow:0 0 10px var(--purple-glow);
+  }
+
+  /* ---------- layout ---------- */
+  main{max-width:980px;margin:0 auto;padding:26px 22px 80px;}
+
+  .card{
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    border:1px solid var(--line);border-radius:16px;
+    padding:18px;margin-bottom:16px;
+    box-shadow:0 18px 40px rgba(0,0,0,.35);
+  }
+
+  .card-head{
+    display:flex;align-items:baseline;justify-content:space-between;
+    gap:12px;flex-wrap:wrap;margin-bottom:14px;
+  }
+  .card-head h2{
+    margin:0;font-size:13px;text-transform:uppercase;letter-spacing:1px;
+    color:var(--muted);font-weight:600;
+  }
+  .hint{font-size:11.5px;color:var(--muted);}
+  .hidden{display:none !important;}
+
+  /* ---------- filters ---------- */
+  .chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .chip{
+    font:inherit;font-size:13px;padding:8px 14px;color:var(--muted);
+    background:#140d20;border:1px solid #33244d;border-radius:999px;cursor:pointer;
+    transition:border-color .15s,color .15s,background .15s,box-shadow .15s;
+  }
+  .chip:hover{border-color:#4a3370;color:var(--text);}
+  .chip.active{
+    color:#fff;background:linear-gradient(180deg,var(--purple),var(--purple-2));
+    border-color:var(--purple);box-shadow:0 6px 18px rgba(124,58,237,.3);
+  }
+
+  .custom-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+  .filter-row{display:flex;gap:12px;flex-wrap:wrap;}
+
+  .field{display:flex;flex-direction:column;gap:6px;flex:1 1 200px;}
+  .field span{font-size:12px;color:var(--muted);letter-spacing:.4px;}
+  
+  input,select{
+    font:inherit;font-size:14px;color:var(--text);background:#140d20;
+    border:1px solid #33244d;border-radius:10px;padding:10px 12px;
+    outline:none;width:100%;transition:border-color .15s, box-shadow .15s;
+  }
+  input:focus,select:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(168,85,247,.16);}
+  input::-webkit-calendar-picker-indicator{filter:invert(.75) hue-rotate(240deg);cursor:pointer;}
+  select{appearance:none;cursor:pointer;}
+
+  /* ---------- stats ---------- */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
+  .stat{
+    padding:16px;background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 30px rgba(0,0,0,.3);
+  }
+  .stat .label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:8px;}
+  .stat .value{display:block;font-size:21px;font-weight:600;font-variant-numeric:tabular-nums;color:#e9d5ff;letter-spacing:.2px;}
+
+  /* ---------- highlights ---------- */
+  .highlights{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;}
+  .hl{display:flex;flex-direction:column;gap:6px;}
+  .hl .label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);}
+  .hl strong{font-size:15px;font-weight:600;color:#e9d5ff;font-variant-numeric:tabular-nums;}
+  .hl .sub{font-size:12px;color:var(--muted);}
+
+  /* ---------- chart ---------- */
+  .chart-scroll{overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+  .chart{display:flex;gap:5px;align-items:stretch;height:160px;min-width:100%;}
+  .chart-col{flex:1 0 auto;min-width:20px;display:flex;flex-direction:column;height:100%;}
+  .bar{
+    flex:1;display:flex;align-items:flex-end;background:#150e22;
+    border:1px solid #241736;border-radius:6px;overflow:hidden;
+  }
+  .bar-fill{
+    width:100%;min-height:2px;background:linear-gradient(180deg,var(--purple),var(--purple-2));
+    border-radius:5px 5px 0 0;transition:height .25s ease;
+  }
+  .chart-col:hover .bar{border-color:#4a3370;}
+  .bar-label{margin-top:6px;height:12px;font-size:9px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums;}
+
+  /* ---------- activity totals ---------- */
+  .activity-list{display:flex;flex-direction:column;gap:10px;}
+  .act{padding:12px 14px;background:#150e22;border:1px solid #2b1e42;border-radius:11px;}
+  .act-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px;}
+  .act-name{font-size:13.5px;font-weight:600;color:#e9d5ff;letter-spacing:.3px;word-break:break-word;}
+  .act-time{font-size:13px;color:#d8c7f5;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .act-bar{height:6px;background:#221736;border-radius:999px;overflow:hidden;}
+  .act-bar span{display:block;height:100%;background:linear-gradient(90deg,var(--purple-2),var(--purple));border-radius:999px;}
+  .act-sub{margin-top:6px;font-size:11.5px;color:var(--muted);}
+
+  /* ---------- days list ---------- */
+  .days-list{display:flex;flex-direction:column;gap:8px;}
+  .day-row{background:#150e22;border:1px solid #2b1e42;border-radius:12px;overflow:hidden;}
+  .day-main{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:12px 14px;cursor:pointer;transition:background .13s;
+  }
+  .day-main:hover{background:#1b1229;}
+  .day-title{font-size:14px;font-weight:500;}
+  .day-sub{margin-top:3px;font-size:11.5px;color:var(--muted);}
+  .day-nums{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+  
+  .pill{
+    font-size:12px;font-variant-numeric:tabular-nums;
+    padding:4px 10px;border-radius:999px;white-space:nowrap;
+  }
+  .pill.logged{color:#e9d5ff;background:#241736;border:1px solid #3a2757;}
+  .pill.unacc{color:var(--muted);background:transparent;border:1px solid #2b1e42;}
+  
+  .chev{
+    width:14px;height:14px;stroke:var(--muted);stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round;fill:none;
+    transition:transform .18s;flex:0 0 auto;
+  }
+  .day-row.open .chev{transform:rotate(90deg);stroke:var(--purple);}
+  
+  .day-details{display:none;padding:0 14px 14px;border-top:1px dashed #2b1e42;}
+  .day-row.open .day-details{display:block;}
+  
+  .mini-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;}
+  .mini-table th{
+    text-align:left;padding:7px 0;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.7px;color:var(--muted);border-bottom:1px solid #241736;
+  }
+  .mini-table td{padding:8px 0;border-bottom:1px solid #1c1329;}
+  .mini-table tr:last-child td{border-bottom:none;}
+  .mini-table td.t{text-align:right;color:#d8c7f5;font-variant-numeric:tabular-nums;white-space:nowrap;}
+
+  /* ---------- buttons ---------- */
+  .export-row{display:flex;gap:8px;}
+  .mini-btn{
+    font:inherit;font-size:12px;font-weight:600;letter-spacing:.3px;
+    padding:7px 13px;color:#e9d5ff;background:#241736;border:1px solid #3a2757;
+    border-radius:9px;cursor:pointer;transition:border-color .15s,color .15s,transform .1s;
+  }
+  .mini-btn:hover{border-color:var(--purple);color:#fff;}
+  .mini-btn:active{transform:translateY(1px);}
+
+  /* ---------- empty state ---------- */
+  .empty{
+    padding:30px 14px;text-align:center;font-size:13.5px;
+    color:var(--muted);border:1px dashed #33244d;border-radius:12px;
+  }
+
+  @media (max-width:520px){
+    .topbar{padding:12px 14px;}
+    main{padding:20px 14px 60px;}
+    .highlights{grid-template-columns:1fr;gap:16px;}
+    .day-main{flex-direction:column;align-items:flex-start;}
+    .day-nums{justify-content:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="nav-group">
+    <a href="time.html" class="nav-btn">
+      <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      Tracker
+    </a>
+  </div>
+  <div class="brand">
+    <span class="dot"></span>Historical Data
+  </div>
+  <div class="nav-group">
+    <a href="delete.html" class="nav-btn" title="Delete Data" style="color:#fca5a5; border-color:#4a1c24; padding:8px 10px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+    </a>
+  </div>
+</header>
+  <main>
+
+    <!-- filters -->
+    <section class="card">
+      <div class="chip-row" id="rangeChips">
+        <button class="chip" data-range="today" type="button">Today</button>
+        <button class="chip" data-range="7" type="button">7 days</button>
+        <button class="chip" data-range="30" type="button">30 days</button>
+        <button class="chip active" data-range="all" type="button">All time</button>
+        <button class="chip" data-range="custom" type="button">Custom</button>
+      </div>
+
+      <div class="custom-row hidden" id="customRow">
+        <label class="field"><span>From</span><input type="date" id="fromDate"></label>
+        <label class="field"><span>To</span><input type="date" id="toDate"></label>
+      </div>
+
+      <div class="filter-row">
+        <label class="field">
+          <span>Activity</span>
+          <select id="activitySelect"><option value="">All activities</option></select>
+        </label>
+        <label class="field">
+          <span>Search</span>
+          <input type="text" id="searchInput" placeholder="Type a name…" autocomplete="off">
+        </label>
+      </div>
+    </section>
+
+    <!-- summary -->
+    <section class="stats">
+      <div class="stat"><span class="label">Total logged</span><span class="value" id="statTotal">—</span></div>
+      <div class="stat"><span class="label">Days with data</span><span class="value" id="statDays">—</span></div>
+      <div class="stat"><span class="label">Avg / day</span><span class="value" id="statAvg">—</span></div>
+      <div class="stat"><span class="label">Avg unaccounted</span><span class="value" id="statUnacc">—</span></div>
+    </section>
+
+    <!-- highlights -->
+    <section class="card highlights hidden" id="highlightsCard">
+      <div class="hl"><span class="label">Best day</span><strong id="bestDay">—</strong><span class="sub" id="bestSub"></span></div>
+      <div class="hl"><span class="label">Lowest day</span><strong id="worstDay">—</strong><span class="sub" id="worstSub"></span></div>
+    </section>
+
+    <!-- chart -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Daily chart</h2>
+        <span class="hint">Filled = logged · empty = unaccounted</span>
+      </div>
+      <div class="chart-scroll"><div class="chart" id="chart"></div></div>
+      <div id="chartEmpty" class="empty hidden">No data in this range.</div>
+    </section>
+
+    <!-- per-activity totals -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Activity totals</h2>
+        <span class="hint" id="activityHint"></span>
+      </div>
+      <div class="activity-list" id="activityList"></div>
+      <div id="activityEmpty" class="empty hidden">Nothing logged in this range.</div>
+    </section>
+
+    <!-- days -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Days</h2>
+        <div class="export-row">
+          <button class="mini-btn" id="csvBtn" type="button">CSV</button>
+          <button class="mini-btn" id="jsonBtn" type="button">JSON</button>
+        </div>
+      </div>
+      <div class="days-list" id="daysList"></div>
+      <div id="daysEmpty" class="empty hidden">No data saved yet. Add activities on the tracker first.</div>
+    </section>
+
+  </main>
+
+<script>
+(function(){
+  'use strict';
+
+  const DB_NAME    = 'lifeos';
+  const DB_VERSION = 1;
+  const MINUTES_IN_DAY = 24 * 60;
+
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DOW    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  /* ---------- DOM ---------- */
+  const rangeChips    = document.getElementById('rangeChips');
+  const customRow     = document.getElementById('customRow');
+  const fromDate      = document.getElementById('fromDate');
+  const toDate        = document.getElementById('toDate');
+  const activitySelect= document.getElementById('activitySelect');
+  const searchInput   = document.getElementById('searchInput');
+
+  const statTotal     = document.getElementById('statTotal');
+  const statDays      = document.getElementById('statDays');
+  const statAvg       = document.getElementById('statAvg');
+  const statUnacc     = document.getElementById('statUnacc');
+
+  const highlightsCard= document.getElementById('highlightsCard');
+  const bestDay       = document.getElementById('bestDay');
+  const bestSub       = document.getElementById('bestSub');
+  const worstDay      = document.getElementById('worstDay');
+  const worstSub      = document.getElementById('worstSub');
+
+  const chart         = document.getElementById('chart');
+  const chartEmpty    = document.getElementById('chartEmpty');
+
+  const activityList  = document.getElementById('activityList');
+  const activityHint  = document.getElementById('activityHint');
+  const activityEmpty = document.getElementById('activityEmpty');
+
+  const daysList      = document.getElementById('daysList');
+  const daysEmpty     = document.getElementById('daysEmpty');
+
+  const csvBtn        = document.getElementById('csvBtn');
+  const jsonBtn       = document.getElementById('jsonBtn');
+
+  /* ---------- STATE ---------- */
+  let allRecords = [];
+  let rangeMode = 'all';
+  let searchTerm = '';
+  let activityFilter = '';
+  let db = null;
+
+  /* ---------- HELPERS ---------- */
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function toKey(d){ return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+  function fromKey(key){ const p = key.split('-'); return new Date(Number(p[0]), Number(p[1])-1, Number(p[2])); }
+  
+  function fmtMinutes(mins){
+    let totalSec = Math.round(Math.abs(mins) * 60);
+    const h = Math.floor(totalSec / 3600); totalSec -= h * 3600;
+    const m = Math.floor(totalSec / 60); totalSec -= m * 60;
+    const s = totalSec;
+    const parts = [];
+    if (h) parts.push(h + 'h');
+    if (m) parts.push(m + 'm');
+    if (s || !parts.length) parts.push(s + 's');
+    return (mins < 0 ? '-' : '') + parts.join(' ');
+  }
+  
+  function shortDate(key){ const d = fromKey(key); return MONTHS[d.getMonth()].slice(0,3) + ' ' + d.getDate(); }
+  function prettyDate(key){ const d = fromKey(key); return DOW[d.getDay()] + ', ' + MONTHS[d.getMonth()].slice(0,3) + ' ' + d.getDate() + ' ' + d.getFullYear(); }
+
+  /* ---------- DB ---------- */
+  function openDB(){
+    return new Promise((resolve, reject)=>{
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onsuccess = (e)=>{ db = e.target.result; resolve(db); };
+      req.onerror = (e)=>reject(e.target.error);
+    });
+  }
+
+  function getAllLogs(){
+    return new Promise((resolve, reject)=>{
+      if (!db) return reject('no db');
+      const req = db.transaction('logs', 'readonly').objectStore('logs').getAll();
+      req.onsuccess = (e)=>resolve(e.target.result || []);
+      req.onerror = (e)=>reject(e.target.error);
+    });
+  }
+
+  /* ---------- FILTERS & CALCULATIONS ---------- */
+  function bounds(){
+    const t = new Date();
+    if (rangeMode === 'today') return { from: toKey(t), to: toKey(t) };
+    if (rangeMode === '7' || rangeMode === '30'){
+      const span = rangeMode === '7' ? 7 : 30;
+      const start = new Date(t.getFullYear(), t.getMonth(), t.getDate() - (span-1));
+      return { from: toKey(start), to: toKey(t) };
+    }
+    if (rangeMode === 'custom'){
+      let a = fromDate.value || null, b = toDate.value || null;
+      if (a && b && a > b){ const tmp=a; a=b; b=tmp; }
+      return { from: a, to: b };
+    }
+    return { from: null, to: null };
+  }
+
+  function filteredRecords(){
+    const b = bounds();
+    const term = searchTerm.toLowerCase();
+    return allRecords.filter(r=>{
+      if (b.from && r.date < b.from) return false;
+      if (b.to && r.date > b.to) return false;
+      if (activityFilter && r.name !== activityFilter) return false;
+      if (term && r.name.toLowerCase().indexOf(term) === -1) return false;
+      return true;
+    });
+  }
+
+  function groupByDate(records){
+    const map = new Map();
+    records.forEach(r=>{
+      if (!map.has(r.date)) map.set(r.date, { date:r.date, items:[], total:0 });
+      const g = map.get(r.date);
+      g.items.push(r);
+      g.total += (r.minutes || 0);
+    });
+    return map;
+  }
+
+  function groupByName(records){
+    const map = new Map();
+    records.forEach(r=>{
+      if (!map.has(r.name)) map.set(r.name, { name:r.name, total:0, days:new Set(), entries:0 });
+      const g = map.get(r.name);
+      g.total += (r.minutes || 0);
+      g.days.add(r.date);
+      g.entries++;
+    });
+    return Array.from(map.values()).sort((a,b)=>b.total - a.total);
+  }
+
+  function dayTotalsOf(records){
+    const map = {};
+    records.forEach(r=>{ map[r.date] = (map[r.date] || 0) + (r.minutes || 0); });
+    return map;
+  }
+
+  /* ---------- RENDER ---------- */
+  function renderStats(records, dayTotalsAll){
+    let total = 0;
+    const dates = new Set();
+    records.forEach(r=>{ total += (r.minutes || 0); dates.add(r.date); });
+    const dayCount = dates.size;
+
+    statTotal.textContent = dayCount ? fmtMinutes(total) : '0m';
+    statDays.textContent  = String(dayCount);
+    statAvg.textContent   = dayCount ? fmtMinutes(total / dayCount) : '—';
+
+    if (!dayCount){ statUnacc.textContent = '—'; return; }
+
+    let unaccSum = 0;
+    dates.forEach(d=>{ unaccSum += Math.max(0, MINUTES_IN_DAY - (dayTotalsAll[d] || 0)); });
+    statUnacc.textContent = fmtMinutes(unaccSum / dayCount);
+  }
+
+  function renderHighlights(grouped){
+    const rows = Array.from(grouped.values());
+    if (!rows.length){ highlightsCard.classList.add('hidden'); return; }
+    rows.sort((a,b)=>b.total - a.total);
+    
+    const best = rows[0];
+    const worst = rows[rows.length - 1];
+    highlightsCard.classList.remove('hidden');
+
+    bestDay.textContent = fmtMinutes(best.total);
+    bestSub.textContent = prettyDate(best.date);
+
+    worstDay.textContent = fmtMinutes(worst.total);
+    worstSub.textContent = prettyDate(worst.date);
+  }
+
+  function renderChart(grouped){
+    chart.innerHTML = '';
+    const dates = Array.from(grouped.keys()).sort();
+    if (!dates.length){ chart.classList.add('hidden'); chartEmpty.classList.remove('hidden'); return; }
+    
+    chartEmpty.classList.add('hidden');
+    chart.classList.remove('hidden');
+
+    dates.forEach(key=>{
+      const g = grouped.get(key);
+      const pct = Math.min(100, (g.total / MINUTES_IN_DAY) * 100);
+      const col = document.createElement('div'); col.className = 'chart-col';
+      col.title = prettyDate(key) + ' — ' + fmtMinutes(g.total) + ' logged';
+      
+      const bar = document.createElement('div'); bar.className = 'bar';
+      const fill = document.createElement('div'); fill.className = 'bar-fill'; fill.style.height = Math.max(2, pct) + '%';
+      bar.appendChild(fill);
+      
+      const label = document.createElement('div'); label.className = 'bar-label'; label.textContent = fromKey(key).getDate();
+      col.appendChild(bar); col.appendChild(label); chart.appendChild(col);
+    });
+  }
+
+  function renderActivities(records){
+    activityList.innerHTML = '';
+    const groups = groupByName(records);
+    if (!groups.length){ activityList.classList.add('hidden'); activityEmpty.classList.remove('hidden'); activityHint.textContent = ''; return; }
+    
+    activityEmpty.classList.add('hidden');
+    activityList.classList.remove('hidden');
+    const max = groups[0].total;
+    activityHint.textContent = groups.length + (groups.length === 1 ? ' activity' : ' activities');
+
+    groups.forEach(g=>{
+      const row = document.createElement('div'); row.className = 'act';
+      const top = document.createElement('div'); top.className = 'act-top';
+      top.innerHTML = `<span class="act-name">${g.name}</span><span class="act-time">${fmtMinutes(g.total)}</span>`;
+      
+      const bar = document.createElement('div'); bar.className = 'act-bar';
+      const inner = document.createElement('span'); inner.style.width = Math.max(2, (g.total/max)*100) + '%';
+      bar.appendChild(inner);
+      
+      const sub = document.createElement('div'); sub.className = 'act-sub';
+      sub.textContent = `${g.entries} ${g.entries === 1 ? 'entry' : 'entries'} across ${g.days.size} ${g.days.size === 1 ? 'day' : 'days'}`;
+      
+      row.appendChild(top); row.appendChild(bar); row.appendChild(sub); activityList.appendChild(row);
+    });
+  }
+
+  function renderDays(grouped, dayTotalsAll){
+    daysList.innerHTML = '';
+    const dates = Array.from(grouped.keys()).sort().reverse();
+    if (!dates.length){ daysEmpty.classList.remove('hidden'); return; }
+    
+    daysEmpty.classList.add('hidden');
+
+    dates.forEach(key=>{
+      const g = grouped.get(key);
+      const dayTotal = dayTotalsAll[key] || 0;
+      const unacc = Math.max(0, MINUTES_IN_DAY - dayTotal);
+
+      const row = document.createElement('div'); row.className = 'day-row';
+      const main = document.createElement('div'); main.className = 'day-main';
+
+      main.innerHTML = `
+        <div>
+          <div class="day-title">${prettyDate(key)}</div>
+          <div class="day-sub">${g.items.length} ${g.items.length === 1 ? 'entry' : 'entries'}</div>
+        </div>
+        <div class="day-nums">
+          <span class="pill logged">${fmtMinutes(g.total)} logged</span>
+          <span class="pill unacc">${fmtMinutes(unacc)} unacc</span>
+          <svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+        </div>
+      `;
+
+      const details = document.createElement('div'); details.className = 'day-details';
+      let tableHtml = `<table class="mini-table"><thead><tr><th>Activity</th><th style="text-align:right">Time</th></tr></thead><tbody>`;
+      
+      g.items.sort((a,b)=>(b.minutes||0) - (a.minutes||0)).forEach(item=>{
+        tableHtml += `<tr><td>${item.name}</td><td class="t">${fmtMinutes(item.minutes)}</td></tr>`;
+      });
+      tableHtml += `</tbody></table>`;
+      details.innerHTML = tableHtml;
+
+      main.addEventListener('click', ()=>row.classList.toggle('open'));
+      row.appendChild(main); row.appendChild(details); daysList.appendChild(row);
+    });
+  }
+
+  function render(){
+    const records = filteredRecords();
+    const dayTotalsAll = dayTotalsOf(allRecords);
+    const grouped = groupByDate(records);
+
+    renderStats(records, dayTotalsAll);
+    renderHighlights(grouped);
+    renderChart(grouped);
+    renderActivities(records);
+    renderDays(grouped, dayTotalsAll);
+  }
+
+  /* ---------- FILTER EVENTS ---------- */
+  function syncActivityOptions(){
+    const names = Array.from(new Set(allRecords.map(r=>r.name))).sort();
+    activitySelect.innerHTML = '<option value="">All activities</option>';
+    names.forEach(n=>{
+      const opt = document.createElement('option'); opt.value = n; opt.textContent = n;
+      activitySelect.appendChild(opt);
+    });
+    if (activityFilter && names.indexOf(activityFilter) === -1) activityFilter = '';
+    activitySelect.value = activityFilter;
+  }
+
+  rangeChips.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.chip');
+    if (!btn) return;
+    rangeMode = btn.getAttribute('data-range');
+    Array.from(rangeChips.children).forEach(c=>c.classList.toggle('active', c===btn));
+    
+    if (rangeMode === 'custom'){
+      customRow.classList.remove('hidden');
+      if (!fromDate.value || !toDate.value){
+        const t = new Date();
+        const start = new Date(t.getFullYear(), t.getMonth(), t.getDate()-29);
+        if (!toDate.value) toDate.value = toKey(t);
+        if (!fromDate.value) fromDate.value = toKey(start);
+      }
+    } else {
+      customRow.classList.add('hidden');
+    }
+    render();
+  });
+
+  fromDate.addEventListener('change', render);
+  toDate.addEventListener('change', render);
+  activitySelect.addEventListener('change', ()=>{ activityFilter = activitySelect.value; render(); });
+  searchInput.addEventListener('input', ()=>{ searchTerm = searchInput.value.trim(); render(); });
+
+  /* ---------- EXPORT ---------- */
+  function download(filename, content, mime){
+    const blob = new Blob([content], { type:mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }
+  function csvEscape(v){
+    const s = String(v);
+    if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  function stamp(){
+    const d = new Date();
+    return d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes());
+  }
+
+  csvBtn.addEventListener('click', ()=>{
+    const records = filteredRecords().sort((a,b)=> a.date === b.date ? a.id-b.id : a.date.localeCompare(b.date));
+    if (!records.length){ alert('Nothing to export.'); return; }
+    const lines = ['date,name,minutes'];
+    records.forEach(r=>lines.push([csvEscape(r.date), csvEscape(r.name), Math.round((r.minutes||0)*100)/100].join(',')));
+    download('logs-'+stamp()+'.csv', lines.join('\n'), 'text/csv;charset=utf-8');
+  });
+
+  jsonBtn.addEventListener('click', ()=>{
+    const records = filteredRecords().sort((a,b)=> a.date === b.date ? a.id-b.id : a.date.localeCompare(b.date));
+    if (!records.length){ alert('Nothing to export.'); return; }
+    const clean = records.map(r=>({ date: r.date, name: r.name, minutes: Math.round((r.minutes||0)*100)/100 }));
+    download('logs-'+stamp()+'.json', JSON.stringify(clean, null, 2), 'application/json');
+  });
+
+  /* ---------- BOOT ---------- */
+  openDB()
+    .then(async ()=>{
+      allRecords = await getAllLogs();
+      syncActivityOptions();
+      render();
+    })
+    .catch(err=>{
+      console.error(err);
+      daysEmpty.classList.remove('hidden');
+      daysEmpty.textContent = 'Database not found. Run db-deploy.html once.';
+      activityEmpty.classList.add('hidden');
+      chartEmpty.classList.add('hidden');
+    });
+
+  window.addEventListener('focus', async ()=>{
+    if (db){
+      try { allRecords = await getAllLogs(); syncActivityOptions(); render(); } catch(e){}
+    }
+  });
+})();
+</script>
+</body>
+</html>

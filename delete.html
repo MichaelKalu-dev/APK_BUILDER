@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delete Data</title>
+<style>
+  :root{
+    --bg:#0b0712;
+    --bg-2:#120b1d;
+    --panel:#181024;
+    --panel-2:#1f1530;
+    --line:#2c1f42;
+    --purple:#a855f7;
+    --purple-2:#7c3aed;
+    --purple-glow:rgba(168,85,247,.35);
+    --text:#ece7f5;
+    --muted:#9a8fb0;
+    --danger:#ef4444;
+    --danger-2:#b91c1c;
+    --ok:#4ade80;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(900px 500px at 15% -10%, rgba(124,58,237,.28), transparent 60%),
+      radial-gradient(700px 500px at 100% 0%, rgba(168,85,247,.18), transparent 55%),
+      linear-gradient(180deg,var(--bg-2),var(--bg) 60%);
+    background-attachment:fixed;
+    min-height:100vh;
+  }
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    display:flex;align-items:center;gap:14px;
+    padding:16px 22px;
+    background:rgba(18,11,29,.78);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+
+  .nav-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12.5px;font-weight:600;
+    color:#e9d5ff;text-decoration:none;
+    background:#241736;border:1px solid #3b2a58;
+    padding:8px 12px;border-radius:10px;
+    transition:border-color .15s, background .15s;
+    flex:0 0 auto;
+  }
+  .nav-btn:hover{border-color:var(--purple);background:#2d1c44;}
+  .nav-btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;}
+
+  .brand{
+    display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.2px;font-size:16px;
+  }
+  .brand .dot{
+    width:8px;height:8px;border-radius:50%;background:var(--purple);box-shadow:0 0 10px var(--purple-glow);
+  }
+
+  /* ---------- layout ---------- */
+  main{max-width:760px;margin:0 auto;padding:26px 22px 100px;}
+
+  .card{
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;
+    box-shadow:0 18px 40px rgba(0,0,0,.35);
+  }
+
+  .card-head{
+    display:flex;align-items:baseline;justify-content:space-between;
+    gap:12px;flex-wrap:wrap;margin-bottom:14px;
+  }
+
+  .card-head h2{
+    margin:0;font-size:13px;text-transform:uppercase;letter-spacing:1px;
+    color:var(--muted);font-weight:600;
+  }
+
+  .hint{font-size:11.5px;color:var(--muted);}
+
+  /* ---------- summary ---------- */
+  .summary{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:14px;flex-wrap:wrap;margin-bottom:14px;
+  }
+
+  .summary .total{font-size:14px;color:#e9d5ff;line-height:1.5;}
+  .summary .total b{font-size:18px;font-weight:600;color:#fff;font-variant-numeric:tabular-nums;}
+
+  .btn-clear-all{
+    font:inherit;font-size:12.5px;font-weight:600;padding:9px 14px;
+    color:#fecaca;background:#2a1119;border:1px solid #5b1f2c;
+    border-radius:10px;cursor:pointer;transition:border-color .15s,background .15s,color .15s;
+  }
+  .btn-clear-all:hover{color:#fff;background:#3a1620;border-color:var(--danger);}
+  .btn-clear-all:disabled{opacity:.45;cursor:not-allowed;}
+
+  /* ---------- months/weeks/days ---------- */
+  .month{
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    border:1px solid var(--line);border-radius:16px;margin-bottom:16px;
+    box-shadow:0 18px 40px rgba(0,0,0,.35);overflow:hidden;
+  }
+
+  .month-head{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;padding:14px 16px;background:rgba(20,13,32,.6);border-bottom:1px solid var(--line);
+  }
+
+  .month-head .title{display:flex;flex-direction:column;gap:3px;}
+  .month-head .name{font-size:14.5px;font-weight:600;color:#e9d5ff;letter-spacing:.2px;}
+  .month-head .meta{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;}
+
+  .week{border-bottom:1px solid #221736;}
+  .week:last-child{border-bottom:none;}
+
+  .week-head{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;padding:10px 16px;background:rgba(10,6,18,.35);
+  }
+
+  .week-head .name{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;}
+
+  .day{border-bottom:1px solid #1c1329;}
+  .day:last-child{border-bottom:none;}
+
+  .day-main{
+    display:flex;align-items:center;gap:12px;padding:12px 16px;
+    cursor:pointer;transition:background .13s;
+  }
+  .day-main:hover{background:rgba(168,85,247,.05);}
+
+  .day-chev{
+    width:26px;height:26px;display:grid;place-items:center;flex:0 0 auto;
+    color:var(--muted);background:#150e22;border:1px solid #2b1e42;
+    border-radius:8px;transition:border-color .15s,color .15s;
+  }
+  .day-main:hover .day-chev{border-color:#4a3370;color:var(--text);}
+  .day-chev svg{
+    width:12px;height:12px;stroke:currentColor;stroke-width:2.4;
+    stroke-linecap:round;stroke-linejoin:round;fill:none;transition:transform .18s;
+  }
+  .day.open .day-chev svg{transform:rotate(90deg);}
+
+  .day-info{flex:1;min-width:0;}
+  .day-title{font-size:13.5px;font-weight:500;color:var(--text);}
+  .day-sub{margin-top:3px;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;}
+
+  .day-details{display:none;padding:4px 16px 14px 54px;border-top:1px dashed #241736;}
+  .day.open .day-details{display:block;}
+
+  .entry{
+    display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1c1329;
+  }
+  .entry:last-child{border-bottom:none;}
+
+  .entry-name{flex:1;font-size:13px;letter-spacing:.3px;word-break:break-word;}
+  .entry-time{font-size:12.5px;color:#d8c7f5;font-variant-numeric:tabular-nums;white-space:nowrap;}
+
+  .entry-x{
+    width:26px;height:26px;display:grid;place-items:center;font:inherit;font-size:16px;line-height:1;
+    color:var(--muted);background:transparent;border:1px solid #2b1e42;
+    border-radius:7px;cursor:pointer;transition:border-color .15s,color .15s,background .15s;
+    flex:0 0 auto;
+  }
+  .entry-x:hover{color:#fff;background:#3a1620;border-color:var(--danger);}
+
+  /* ---------- small danger buttons ---------- */
+  .btn-del{
+    font:inherit;font-size:11.5px;font-weight:600;letter-spacing:.3px;
+    padding:6px 11px;color:#fecaca;background:#241120;border:1px solid #3d1d2c;
+    border-radius:8px;cursor:pointer;transition:border-color .15s,color .15s,background .15s;
+    white-space:nowrap;
+  }
+  .btn-del:hover{color:#fff;background:#3a1620;border-color:var(--danger);}
+
+  /* ---------- empty ---------- */
+  .empty{
+    padding:36px 14px;text-align:center;font-size:13.5px;line-height:1.6;
+    color:var(--muted);border:1px dashed #33244d;border-radius:14px;
+  }
+  .hidden{display:none !important;}
+
+  /* ---------- modal ---------- */
+  .modal{
+    position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:rgba(6,3,12,.72);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .16s;
+  }
+  .modal.open{opacity:1;pointer-events:auto;}
+
+  .modal-box{
+    width:100%;max-width:340px;padding:20px;border-radius:16px;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid #3a2757;
+    box-shadow:0 0 0 1px rgba(168,85,247,.10),0 24px 60px rgba(0,0,0,.6);
+    transform:translateY(10px) scale(.97);transition:transform .18s;
+  }
+  .modal.open .modal-box{transform:translateY(0) scale(1);}
+  .modal-box h3{margin:0 0 8px;font-size:15px;font-weight:600;}
+  .modal-box p{margin:0 0 18px;font-size:13px;line-height:1.5;color:var(--muted);word-break:break-word;}
+
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+  .modal-btn{
+    font:inherit;font-size:13px;font-weight:600;padding:9px 16px;
+    border-radius:10px;cursor:pointer;transition:filter .15s, transform .1s;
+  }
+  .modal-btn:active{transform:translateY(1px);}
+  .modal-cancel{color:var(--text);background:#241736;border:1px solid #3b2a58;}
+  .modal-cancel:hover{border-color:var(--purple);}
+  .modal-confirm{color:#fff;background:linear-gradient(180deg,var(--danger),var(--danger-2));border:1px solid var(--danger);}
+  .modal-confirm:hover{filter:brightness(1.1);}
+
+  /* ---------- toast ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);z-index:80;
+    padding:11px 18px;font-size:13px;color:#bbf7d0;background:#0f2417;
+    border:1px solid #1f5133;border-radius:11px;box-shadow:0 12px 30px rgba(0,0,0,.5);
+    opacity:0;pointer-events:none;transition:opacity .18s, transform .18s;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+
+  @media (max-width:520px){
+    .topbar{padding:12px 14px;}
+    main{padding:20px 14px 80px;}
+    .month-head{padding:12px 14px;}
+    .day-main{padding:12px 14px;}
+    .day-details{padding:4px 14px 14px 52px;}
+  }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <a href="index.html" class="nav-btn">
+      <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      Back
+    </a>
+    <div class="brand">
+      <span class="dot"></span>Delete Data
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="card-head">
+        <h2>Stored Data</h2>
+        <span class="hint" id="summaryHint"></span>
+      </div>
+      <div class="summary">
+        <div class="total">
+          <b id="totalEntries">0</b> logs · <span id="totalTime">0m</span>
+        </div>
+        <button class="btn-clear-all" id="clearAllBtn" type="button">Clear all</button>
+      </div>
+    </section>
+
+    <div class="empty hidden" id="emptyState">
+      The database is empty.<br>Nothing to remove.
+    </div>
+
+    <div id="monthsContainer"></div>
+  </main>
+
+  <!-- Confirm modal -->
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <h3 id="modalTitle">Delete?</h3>
+      <p id="modalBody">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="modal-btn modal-cancel" id="modalCancel" type="button">Cancel</button>
+        <button class="modal-btn modal-confirm" id="modalConfirm" type="button">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  const DB_NAME = 'lifeos';
+  const DB_VERSION = 1;
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DOW    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  let db = null;
+  let allLogs = [];
+  let openDays = new Set();
+  let modalResolve = null;
+
+  /* ---------- DOM ---------- */
+  const totalEntries = document.getElementById('totalEntries');
+  const totalTime    = document.getElementById('totalTime');
+  const summaryHint  = document.getElementById('summaryHint');
+  const clearAllBtn  = document.getElementById('clearAllBtn');
+  const emptyState   = document.getElementById('emptyState');
+  const monthsCont   = document.getElementById('monthsContainer');
+
+  const modal        = document.getElementById('modal');
+  const modalTitle   = document.getElementById('modalTitle');
+  const modalBody    = document.getElementById('modalBody');
+  const modalCancel  = document.getElementById('modalCancel');
+  const modalConfirm = document.getElementById('modalConfirm');
+  const toastEl      = document.getElementById('toast');
+
+  /* ---------- HELPERS ---------- */
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function toKey(d){ return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+  function fromKey(key){ const p = key.split('-'); return new Date(Number(p[0]), Number(p[1])-1, Number(p[2])); }
+  function shortDate(key){ const d = fromKey(key); return MONTHS[d.getMonth()].slice(0,3) + ' ' + d.getDate(); }
+  function prettyDate(key){ const d = fromKey(key); return DOW[d.getDay()] + ', ' + MONTHS[d.getMonth()].slice(0,3) + ' ' + d.getDate() + ' ' + d.getFullYear(); }
+  function monthLabelOf(monthKey){ const p = monthKey.split('-'); return MONTHS[Number(p[1])-1] + ' ' + p[0]; }
+  
+  function weekStartKey(dateKey){
+    const d = fromKey(dateKey);
+    const wd = d.getDay();
+    return toKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() - wd));
+  }
+  function weekLabelOf(weekKey){
+    const s = fromKey(weekKey);
+    const e = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6);
+    return 'Week of ' + shortDate(toKey(s)) + ' – ' + shortDate(toKey(e));
+  }
+
+  function fmtMinutes(mins){
+    let totalSec = Math.round(Math.abs(mins) * 60);
+    const h = Math.floor(totalSec / 3600); totalSec -= h * 3600;
+    const m = Math.floor(totalSec / 60); totalSec -= m * 60;
+    const s = totalSec;
+    const parts = [];
+    if (h) parts.push(h + 'h');
+    if (m) parts.push(m + 'm');
+    if (s || !parts.length) parts.push(s + 's');
+    return (mins < 0 ? '-' : '') + parts.join(' ');
+  }
+
+  /* ---------- DB OPS ---------- */
+  function openDB(){
+    return new Promise((resolve, reject)=>{
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onsuccess = (e)=>{ db = e.target.result; resolve(); };
+      req.onerror = (e)=>reject(e.target.error);
+    });
+  }
+
+  function getAllLogs(){
+    return new Promise((resolve, reject)=>{
+      const req = db.transaction('logs', 'readonly').objectStore('logs').getAll();
+      req.onsuccess = (e)=>resolve(e.target.result || []);
+      req.onerror = (e)=>reject(e.target.error);
+    });
+  }
+
+  // Deletes from logs, and also unchecks the task in 'days'
+  function deleteLogRecord(log) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(['logs', 'days'], 'readwrite');
+      
+      // 1. Delete from logs
+      tx.objectStore('logs').delete(log.id);
+
+      // 2. Uncheck in days
+      const daysStore = tx.objectStore('days');
+      const getReq = daysStore.get(log.date);
+      
+      getReq.onsuccess = (e) => {
+        const day = e.target.result;
+        if (day && day.tasks) {
+          let changed = false;
+          day.tasks.forEach(t => {
+            // Find task by ID or name match
+            if (t.id === log.taskId || t.name === log.name) {
+              if (t.done) { t.done = false; changed = true; }
+            }
+          });
+          if (changed) daysStore.put(day);
+        }
+      };
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  // Deletes a whole day from logs and days
+  function deleteDayRecord(date) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(['logs', 'days'], 'readwrite');
+      
+      // Delete Day Plan
+      tx.objectStore('days').delete(date);
+
+      // Delete Logs for this date
+      const logsStore = tx.objectStore('logs');
+      const idx = logsStore.index('date');
+      const req = idx.openCursor(date);
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) { cursor.delete(); cursor.continue(); }
+      };
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  // Deletes a range of dates (for weeks/months/clear all)
+  function deleteDateRange(datesSet) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(['logs', 'days'], 'readwrite');
+      const logsStore = tx.objectStore('logs');
+      const daysStore = tx.objectStore('days');
+
+      // Delete days
+      datesSet.forEach(d => daysStore.delete(d));
+
+      // Delete logs
+      const req = logsStore.openCursor();
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          if (datesSet.has(cursor.value.date)) cursor.delete();
+          cursor.continue();
+        }
+      };
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  /* ---------- MODAL ---------- */
+  function askConfirm(title, body, confirmLabel){
+    modalTitle.textContent = title;
+    modalBody.textContent = body;
+    modalConfirm.textContent = confirmLabel || 'Delete';
+    modal.classList.add('open');
+    return new Promise(function(resolve){ modalResolve = resolve; });
+  }
+
+  modalCancel.addEventListener('click', ()=>{ modal.classList.remove('open'); if(modalResolve) modalResolve(false); modalResolve=null; });
+  modalConfirm.addEventListener('click', ()=>{ modal.classList.remove('open'); if(modalResolve) modalResolve(true); modalResolve=null; });
+  modal.addEventListener('click', (e)=>{ if(e.target===modal){ modal.classList.remove('open'); if(modalResolve) modalResolve(false); modalResolve=null; } });
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && modal.classList.contains('open')){ modal.classList.remove('open'); if(modalResolve) modalResolve(false); modalResolve=null; } });
+
+  /* ---------- TOAST ---------- */
+  let toastTimer = null;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>toastEl.classList.remove('show'), 2200);
+  }
+
+  /* ---------- GROUPING ---------- */
+  function buildTree(logs){
+    const monthMap = new Map();
+
+    logs.forEach(r=>{
+      const monthKey = r.date.slice(0, 7);
+      if (!monthMap.has(monthKey)) monthMap.set(monthKey, { key: monthKey, days: new Map() });
+      const m = monthMap.get(monthKey);
+      if (!m.days.has(r.date)) m.days.set(r.date, { date: r.date, entries: [], total: 0 });
+      
+      const d = m.days.get(r.date);
+      d.entries.push(r);
+      d.total += (r.minutes || 0);
+    });
+
+    const months = [];
+    Array.from(monthMap.values()).sort((a,b)=>b.key.localeCompare(a.key)).forEach(m=>{
+      const dayKeys = Array.from(m.days.keys()).sort().reverse();
+      const weekMap = new Map();
+
+      dayKeys.forEach(dk=>{
+        const wk = weekStartKey(dk);
+        if (!weekMap.has(wk)) weekMap.set(wk, { key: wk, days: [], total: 0, count: 0, dates: new Set() });
+        const w = weekMap.get(wk);
+        const d = m.days.get(dk);
+        w.days.push(d);
+        w.total += d.total;
+        w.count += d.entries.length;
+        w.dates.add(dk);
+      });
+
+      const weeks = Array.from(weekMap.values()).sort((a,b)=>b.key.localeCompare(a.key));
+      const monthTotal = weeks.reduce((s,w)=>s + w.total, 0);
+      const monthCount = weeks.reduce((s,w)=>s + w.count, 0);
+      const monthDates = new Set();
+      weeks.forEach(w=> w.dates.forEach(d=> monthDates.add(d)));
+
+      months.push({ key: m.key, label: monthLabelOf(m.key), weeks, total: monthTotal, count: monthCount, dates: monthDates });
+    });
+
+    return months;
+  }
+
+
+  /* ---------- RENDER ---------- */
+  function render(){
+    monthsCont.innerHTML = '';
+
+    const totalMin = allLogs.reduce((s,r)=>s + (r.minutes||0), 0);
+    totalEntries.textContent = allLogs.length;
+    totalTime.textContent = fmtMinutes(totalMin);
+    
+    const daysCount = new Set(allLogs.map(r=>r.date)).size;
+    summaryHint.textContent = daysCount + (daysCount === 1 ? ' day' : ' days');
+    clearAllBtn.disabled = allLogs.length === 0;
+
+    if (!allLogs.length){
+      emptyState.classList.remove('hidden');
+      return;
+    }
+    emptyState.classList.add('hidden');
+
+    buildTree(allLogs).forEach(m=> monthsCont.appendChild(renderMonth(m)));
+  }
+
+  function renderMonth(m){
+    const el = document.createElement('div'); el.className = 'month';
+    const head = document.createElement('div'); head.className = 'month-head';
+    
+    head.innerHTML = `
+      <div class="title">
+        <div class="name">${m.label}</div>
+        <div class="meta">${m.count} ${m.count===1?'log':'logs'} · ${fmtMinutes(m.total)}</div>
+      </div>
+    `;
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-del'; delBtn.type = 'button'; delBtn.textContent = 'Delete month';
+    delBtn.addEventListener('click', ()=>handleDeleteMonth(m));
+    head.appendChild(delBtn);
+    el.appendChild(head);
+
+    m.weeks.forEach(w=> el.appendChild(renderWeek(w)));
+    return el;
+  }
+
+  function renderWeek(w){
+    const el = document.createElement('div'); el.className = 'week';
+    const head = document.createElement('div'); head.className = 'week-head';
+    head.innerHTML = `<div class="name">${weekLabelOf(w.key)} · ${w.count} logs</div>`;
+    
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-del'; delBtn.type = 'button'; delBtn.textContent = 'Delete week';
+    delBtn.addEventListener('click', ()=>handleDeleteWeek(w));
+    head.appendChild(delBtn);
+    el.appendChild(head);
+
+    w.days.forEach(d=> el.appendChild(renderDay(d)));
+    return el;
+  }
+
+  function renderDay(d){
+    const el = document.createElement('div');
+    el.className = 'day' + (openDays.has(d.date) ? ' open' : '');
+    
+    const main = document.createElement('div'); main.className = 'day-main';
+    const chev = document.createElement('div'); chev.className = 'day-chev';
+    chev.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>';
+    
+    const info = document.createElement('div'); info.className = 'day-info';
+    info.innerHTML = `
+      <div class="day-title">${prettyDate(d.date)}</div>
+      <div class="day-sub">${d.entries.length} ${d.entries.length===1?'entry':'entries'} · ${fmtMinutes(d.total)}</div>
+    `;
+    
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-del'; delBtn.type = 'button'; delBtn.textContent = 'Delete day';
+    delBtn.addEventListener('click', (e)=>{ e.stopPropagation(); handleDeleteDay(d); });
+
+    main.appendChild(chev); main.appendChild(info); main.appendChild(delBtn);
+    main.addEventListener('click', (e)=>{
+      if (e.target.closest('.btn-del')) return;
+      el.classList.toggle('open');
+      if (el.classList.contains('open')) openDays.add(d.date); else openDays.delete(d.date);
+    });
+
+    const details = document.createElement('div'); details.className = 'day-details';
+    d.entries.sort((a,b)=>(b.minutes||0)-(a.minutes||0)).forEach(entry=>{
+      details.appendChild(renderEntry(entry));
+    });
+
+    el.appendChild(main); el.appendChild(details);
+    return el;
+  }
+
+  function renderEntry(entry){
+    const el = document.createElement('div'); el.className = 'entry';
+    el.innerHTML = `<span class="entry-name">${entry.name}</span><span class="entry-time">${fmtMinutes(entry.minutes)}</span>`;
+    
+    const x = document.createElement('button');
+    x.className = 'entry-x'; x.type = 'button'; x.setAttribute('aria-label', 'Delete log'); x.textContent = '×';
+    x.addEventListener('click', ()=>handleDeleteEntry(entry));
+    
+    el.appendChild(x);
+    return el;
+  }
+
+  /* ---------- RELOAD ---------- */
+  async function reload(){
+    try {
+      allLogs = await getAllLogs();
+      render();
+    } catch(err) {
+      console.error(err); toast('Could not read database.');
+    }
+  }
+
+  /* ---------- DELETE HANDLERS ---------- */
+  async function handleDeleteEntry(entry){
+    const ok = await askConfirm('Delete this log?', `"${entry.name}" — ${fmtMinutes(entry.minutes)} on ${prettyDate(entry.date)}`, 'Delete');
+    if (!ok) return;
+
+    try {
+      await deleteLogRecord(entry);
+      toast('Log deleted. (Task unchecked)');
+      await reload();
+    } catch(err){ console.error(err); toast('Could not delete.'); }
+  }
+
+  async function handleDeleteDay(d){
+    const ok = await askConfirm('Delete this day?', `All ${d.entries.length} logs and the daily plan for ${prettyDate(d.date)} will be removed.`, 'Delete day');
+    if (!ok) return;
+
+    try {
+      await deleteDayRecord(d.date);
+      openDays.delete(d.date);
+      toast('Day deleted.');
+      await reload();
+    } catch(err){ console.error(err); toast('Could not delete.'); }
+  }
+
+  async function handleDeleteWeek(w){
+    const ok = await askConfirm('Delete this week?', `${w.count} logs across ${w.days.length} days will be removed (${weekLabelOf(w.key)}).`, 'Delete week');
+    if (!ok) return;
+
+    try {
+      await deleteDateRange(w.dates);
+      w.days.forEach(d=>openDays.delete(d.date));
+      toast('Week deleted.');
+      await reload();
+    } catch(err){ console.error(err); toast('Could not delete.'); }
+  }
+
+  async function handleDeleteMonth(m){
+    const ok = await askConfirm('Delete this month?', `All ${m.count} logs for ${m.label} will be removed.`, 'Delete month');
+    if (!ok) return;
+
+    try {
+      await deleteDateRange(m.dates);
+      openDays.clear();
+      toast('Month deleted.');
+      await reload();
+    } catch(err){ console.error(err); toast('Could not delete.'); }
+  }
+
+  clearAllBtn.addEventListener('click', async ()=>{
+    if (!allLogs.length) return;
+    const ok = await askConfirm('Clear all data?', 'Every log and every saved plan will be permanently removed.', 'Clear everything');
+    if (!ok) return;
+
+    try {
+      const allDates = new Set(allLogs.map(r=>r.date));
+      // Also need to wipe empty days that have no logs but might have plans
+      // Let's just clear both stores completely for safety
+      const tx = db.transaction(['logs', 'days'], 'readwrite');
+      tx.objectStore('logs').clear();
+      tx.objectStore('days').clear();
+      
+      tx.oncomplete = async () => {
+        openDays.clear();
+        toast('All data cleared.');
+        await reload();
+      };
+    } catch(err){ console.error(err); toast('Could not clear.'); }
+  });
+
+  /* ---------- BOOT ---------- */
+  openDB()
+    .then(getAllLogs)
+    .then(logs=>{ allLogs = logs; render(); })
+    .catch(err=>{
+      console.error(err);
+      emptyState.classList.remove('hidden');
+      emptyState.textContent = 'Database not found. Run db-deploy.html once.';
+    });
+
+})();
+</script>
+</body>
+</html>
