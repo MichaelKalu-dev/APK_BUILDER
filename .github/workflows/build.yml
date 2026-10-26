@@ -1,0 +1,54 @@
+name: Build APK
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: Build APK
+      run: |
+        mkdir -p app/build
+        mkdir -p app/src/main/res/values
+        echo '<resources><string name="app_name">Life OS</string></resources>' > app/src/main/res/values/strings.xml
+        
+        # Compile Resources
+        aapt2 compile --dir app/src/main/res -o app/build/res.zip
+        aapt2 link -o app/build/app-unsigned.apk -I $ANDROID_HOME/platforms/android-34/android.jar --manifest app/src/main/AndroidManifest.xml -R app/build/res.zip --java app/build/gen
+        
+        # Compile Java
+        javac -source 1.8 -target 1.8 -bootclasspath $ANDROID_HOME/platforms/android-34/android.jar -d app/build/obj app/src/main/java/com/example/webapp/MainActivity.java app/build/gen/com/example/webapp/R.java
+        
+        # Convert to Dex
+        d8 --lib $ANDROID_HOME/platforms/android-34/android.jar --output app/build app/build/obj/com/example/webapp/*.class
+        
+        # Package HTML files into APK
+        mkdir -p app/src/main/assets
+        cp *.html app/src/main/assets/ 2>/dev/null || true
+        cp *.json app/src/main/assets/ 2>/dev/null || true
+        cp *.svg app/src/main/assets/ 2>/dev/null || true
+        
+        cd app/src/main/assets
+        zip -r ../../../build/app-unsigned.apk .
+        cd ../../../../../
+        zip -j app/build/app-unsigned.apk app/build/classes.dex
+        
+        # Sign APK
+        keytool -genkey -v -keystore app/build/key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias myalias -storepass password -keypass password -dname "CN=Android Debug,O=Android,C=US"
+        zipalign -v -p 4 app/build/app-unsigned.apk app/build/app-aligned.apk
+        apksigner sign --ks app/build/key.jks --ks-pass pass:password --key-pass pass:password --out app/build/LifeOS.apk app/build/app-aligned.apk
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: LifeOS-APK
+        path: app/build/LifeOS.apk
