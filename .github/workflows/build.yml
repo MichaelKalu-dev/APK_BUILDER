@@ -15,6 +15,11 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       
+    - name: Install specific SDK and Build Tools
+      run: |
+        sdkmanager "platforms;android-34" "build-tools;34.0.0"
+        echo "$ANDROID_HOME/build-tools/34.0.0" >> $GITHUB_PATH
+      
     - name: Build APK
       run: |
         mkdir -p app/build
@@ -31,15 +36,15 @@ jobs:
         # Convert to Dex
         d8 --lib $ANDROID_HOME/platforms/android-34/android.jar --output app/build app/build/obj/com/example/webapp/*.class
         
-        # Package HTML files into APK
+        # Package HTML files into the APK correctly
         mkdir -p app/src/main/assets
-        cp *.html app/src/main/assets/ 2>/dev/null || true
+        cp *.html app/src/main/assets/
         cp *.json app/src/main/assets/ 2>/dev/null || true
         cp *.svg app/src/main/assets/ 2>/dev/null || true
         
-        cd app/src/main/assets
-        zip -r ../../../build/app-unsigned.apk .
-        cd ../../../../../
+        cd app/src/main
+        zip -r ../../../build/app-unsigned.apk assets/
+        cd ../../../../
         zip -j app/build/app-unsigned.apk app/build/classes.dex
         
         # Sign APK
